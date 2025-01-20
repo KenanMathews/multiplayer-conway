@@ -1,6 +1,4 @@
-// components/game/Timer.jsx
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 
 const Timer = ({ turnStartTime, turnDuration, isCurrentTurn }) => {
@@ -28,27 +26,20 @@ const Timer = ({ turnStartTime, turnDuration, isCurrentTurn }) => {
   }, [turnStartTime, turnDuration]);
 
   return (
-    <Card>
-      <CardContent className="pt-6">
-        <div className="space-y-2">
-          <div className="flex justify-between text-sm">
-            <span>Time Left</span>
-            <span>{Math.ceil(timeLeft)}s</span>
-          </div>
-          <Progress
-            value={progress}
-            className={isCurrentTurn ? "bg-red-100" : "bg-gray-100"}
-          >
-            <div
-              className={`h-full ${
-                isCurrentTurn ? "bg-red-500" : "bg-gray-500"
-              } transition-all duration-100`}
-              style={{ width: `${progress}%` }}
-            />
-          </Progress>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="flex items-center gap-2">
+      <span className="text-sm">Time: {Math.ceil(timeLeft)}s</span>
+      <Progress 
+        value={progress} 
+        className={`w-24 h-2 ${isCurrentTurn ? "bg-red-100" : "bg-gray-100"}`}
+      >
+        <div
+          className={`h-full transition-all duration-100 ${
+            isCurrentTurn ? "bg-red-500" : "bg-gray-500"
+          }`}
+          style={{ width: `${progress}%` }}
+        />
+      </Progress>
+    </div>
   );
 };
 

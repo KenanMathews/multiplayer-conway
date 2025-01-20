@@ -1,26 +1,24 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useGame } from '../context/GameContext';
 import { GameStatus } from '../types/game';
 import Grid from '../components/game/Grid';
 import PatternControl from '../components/game/PatternControl';
-import Stats from '../components/game/Stats';
 import Timer from '../components/game/Timer';
+import { Progress } from "@/components/ui/progress";
 import { socket } from '../utils/socket';
 
 const Game = () => {
   const { id: gameId } = useParams();
   const navigate = useNavigate();
   const { gameState } = useGame();
-  const [previewPattern, setPreviewPattern] = useState(null);
-  const [activeTab, setActiveTab] = useState("game");
+  const [previewPattern, setPreviewPattern] = React.useState(null);
 
   // Redirect if game is not in PLAYING state
-  useEffect(() => {
+  React.useEffect(() => {
     if (!gameState || gameState?.status !== GameStatus.PLAYING) {
-      navigate(`/lobby/${gameId}`);
+      navigate(`/`);
     }
   }, [gameState, gameId, navigate]);
 
@@ -31,30 +29,48 @@ const Game = () => {
   const currentPlayer = gameState.players.find(p => p.id === socket.id);
   const isCurrentTurn = gameState.currentTurn.playerId === socket.id;
 
+  const totalCells = gameState.settings.gridSize * gameState.settings.gridSize;
+  const redPercentage = (gameState.redTerritory / totalCells) * 100;
+  const bluePercentage = (gameState.blueTerritory / totalCells) * 100;
+
   return (
-    <div className="h-screen bg-gradient-to-b from-background to-muted p-4 overflow-hidden">
-      <div className="container mx-auto h-full max-w-7xl flex flex-col">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col h-full">
-          <div className="flex items-center justify-between mb-4">
-            <TabsList>
-              <TabsTrigger value="game">Game</TabsTrigger>
-              <TabsTrigger value="stats">Stats</TabsTrigger>
-              <TabsTrigger value="controls">Controls</TabsTrigger>
-            </TabsList>
-            
-            {/* Timer always visible */}
+    <div className="h-screen bg-background p-4">
+      <div className="container mx-auto h-full flex flex-col gap-4 max-w-6xl">
+        {/* Top Stats Bar */}
+        <Card className="p-2">
+          <div className="flex justify-between items-center">
+            <div className="flex gap-4">
+              {gameState.players.map((player) => (
+                <div key={player.id} className="flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${player.team === 'red' ? 'bg-red-500' : 'bg-blue-500'}`} />
+                  <span className="text-sm">{player.username}</span>
+                </div>
+              ))}
+            </div>
             <Timer
               turnStartTime={gameState.currentTurn.startTime}
               turnDuration={gameState.settings.turnTime}
               isCurrentTurn={isCurrentTurn}
             />
           </div>
+        </Card>
 
-          <div className="flex-1 min-h-0"> {/* This wrapper ensures proper scrolling */}
-            <TabsContent value="game" className="h-full m-0">
-              <div className="h-full flex flex-col lg:flex-row gap-4">
-                {/* Game Grid - Always visible on larger screens */}
-                <Card className="flex-1 p-4 min-h-0">
+        {/* Main Game Area */}
+        <div className="flex gap-4 flex-1 min-h-0">
+          {/* Pattern Selection Sidebar */}
+          <PatternControl
+            isCurrentTurn={isCurrentTurn}
+            currentTeam={currentPlayer?.team}
+            currentGeneration={gameState.currentTurn.generation}
+            setPreviewPattern={setPreviewPattern}
+          />
+
+          {/* Game Grid and Stats */}
+          <div className="flex-1 flex flex-col gap-4">
+            {/* Square Grid Container with max size */}
+            <div className="flex justify-center items-center flex-1">
+              <div className="relative aspect-square w-full max-w-xl max-h-xl">
+                <Card className="absolute inset-0 p-4">
                   <Grid
                     grid={gameState.grid}
                     gridSize={gameState.settings.gridSize}
@@ -63,41 +79,30 @@ const Game = () => {
                     previewPattern={previewPattern}
                   />
                 </Card>
+              </div>
+            </div>
 
-                {/* Pattern Controls - Only on larger screens */}
-                <div className="hidden lg:block w-80 overflow-y-auto">
-                  <Card className="p-4 sticky top-0">
-                    <PatternControl
-                      isCurrentTurn={isCurrentTurn}
-                      currentPhase={gameState.currentTurn.phase}
-                      currentTeam={currentPlayer?.team}
-                      currentGeneration={gameState.currentTurn.generation}
-                      setPreviewPattern={setPreviewPattern}
-                    />
-                  </Card>
+            {/* Bottom Stats */}
+            <Card className="p-2">
+              <div className="flex gap-4">
+                <div className="flex-1">
+                  <div className="flex justify-between text-sm">
+                    <span>Red Team</span>
+                    <span>{Math.round(redPercentage)}%</span>
+                  </div>
+                  <Progress value={redPercentage} className="h-2" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex justify-between text-sm">
+                    <span>Blue Team</span>
+                    <span>{Math.round(bluePercentage)}%</span>
+                  </div>
+                  <Progress value={bluePercentage} className="h-2" />
                 </div>
               </div>
-            </TabsContent>
-
-            <TabsContent value="stats" className="h-full m-0 overflow-y-auto">
-              <Card className="p-4">
-                <Stats gameState={gameState} />
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="controls" className="h-full m-0 overflow-y-auto">
-              <Card className="p-4">
-                <PatternControl
-                  isCurrentTurn={isCurrentTurn}
-                  currentPhase={gameState.currentTurn.phase}
-                  currentTeam={currentPlayer?.team}
-                  currentGeneration={gameState.currentTurn.generation}
-                  setPreviewPattern={setPreviewPattern}
-                />
-              </Card>
-            </TabsContent>
+            </Card>
           </div>
-        </Tabs>
+        </div>
       </div>
     </div>
   );
