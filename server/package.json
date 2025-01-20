@@ -3,9 +3,10 @@
   "version": "1.0.0",
   "main": "src/index.js",
   "scripts": {
-    "dev": "node src/index.js",
+    "dev": "nodemon src/index.js",
     "build": "npm install --production",
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "clean": "rm -rf node_modules public"
   },
   "dependencies": {
     "cors": "^2.8.5",
@@ -15,5 +16,8 @@
   },
   "devDependencies": {
     "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=16.0.0"
   }
 }

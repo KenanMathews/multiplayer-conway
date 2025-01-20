@@ -1,24 +1,31 @@
 {
-    "name": "multiplayer-conway",
-    "version": "1.0.0",
-    "private": true,
-    "scripts": {
-      "install:deps": "npm install && npm run install:client && npm run install:server",
-      "install:client": "cd client && npm install",
-      "install:server": "cd server && npm install",
-      
-      "dev": "concurrently \"npm run dev:client\" \"npm run dev:server\"",
-      "dev:client": "cd client && npm run dev",
-      "dev:server": "cd server && npm run dev",
-      
-      "build": "npm run build:client && npm run build:server",
-      "build:client": "cd client && npm run build",
-      "build:server": "cd server && npm run build",
-      
-      "start": "cd server && npm run start",
-      "start:prod": "npm run build && npm run start"
-    },
-    "devDependencies": {
-      "concurrently": "^8.2.2"
-    }
+  "name": "multiplayer-conway",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "install:deps": "npm install && npm run install:client && npm run install:server",
+    "install:client": "cd client && npm install",
+    "install:server": "cd server && npm install",
+    
+    "dev": "concurrently \"npm run dev:client\" \"npm run dev:server\"",
+    "dev:client": "cd client && npm run dev",
+    "dev:server": "cd server && npm run dev",
+    
+    "clean": "npm run clean:client && npm run clean:server && rm -rf node_modules",
+    "clean:client": "cd client && npm run clean",
+    "clean:server": "cd server && npm run clean",
+    
+    "build": "npm run clean && npm run build:client && npm run build:server",
+    "build:client": "cd client && npm install && npm run build",
+    "build:server": "cd server && npm ci --production",
+    
+    "start": "cd server && NODE_ENV=production npm run start",
+    "postinstall": "chmod +x build.sh"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=16.0.0"
   }
+}
