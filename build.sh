@@ -17,7 +17,7 @@ echo "📋 Setting up server..."
 cd ../server
 mkdir -p public
 cp -r ../client/dist/* public/
-npm ci --production
+npm install --production
 
 echo "✨ Build completed!"
 cd ..

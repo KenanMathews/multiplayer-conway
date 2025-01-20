@@ -17,7 +17,7 @@
     
     "build": "npm run clean && npm run build:client && npm run build:server",
     "build:client": "cd client && npm install && npm run build",
-    "build:server": "cd server && npm ci --production",
+    "build:server": "cd server && npm install --production",
     
     "start": "cd server && NODE_ENV=production npm run start",
     "postinstall": "chmod +x build.sh"
