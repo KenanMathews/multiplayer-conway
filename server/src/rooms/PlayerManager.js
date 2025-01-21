@@ -3,6 +3,7 @@ const RoomManager = require('./RoomManager');
 
 class PlayerManager {
   addPlayer(gameId, player) {
+    console.log('addPlayer', gameId, player);
     if (!RoomManager.canJoinRoom(gameId)) {
       throw new Error('Cannot join room');
     }

@@ -113,7 +113,6 @@ class RoomManager {
   isValidMove(gameId, playerId, x, y) {
     const room = this.getRoom(gameId);
     if (!room) return false;
-  
     return (
       room.status === GameStatus.PLAYING &&
       room.currentTurn.playerId === playerId &&

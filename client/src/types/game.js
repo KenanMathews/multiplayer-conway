@@ -42,13 +42,17 @@ export const createGameSettings = ({
   turnTime = 30,
   maxTimeoutWarnings = 3,
   maxPlayers = 2,
-  minPlayersToStart = 2
+  minPlayersToStart = 2,
+  territoryThresholdEnabled = true,
+  territoryThreshold = 12
 } = {}) => ({
   gridSize,
   turnTime,
   maxTimeoutWarnings,
   maxPlayers,
-  minPlayersToStart
+  minPlayersToStart,
+  territoryThresholdEnabled,
+  territoryThreshold
 });
 
 // Initialize empty grid

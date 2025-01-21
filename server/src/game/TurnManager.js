@@ -1,6 +1,8 @@
 // src/game/TurnManager.js
 const { ConwayRules } = require("./ConwayRules");
 const { TeamColors, TurnPhase, GameStatus } = require('../constants/gameConstants');
+const VictoryCheck = require('./VictoryCheck');
+const RoomManager = require('../rooms/RoomManager');
 
 class TurnManager {
   constructor() {
@@ -107,6 +109,12 @@ class TurnManager {
       return null;
     }
 
+    // Don't process turns if game is in simulation mode
+    if (gameState.status === GameStatus.SIMULATING) {
+      console.log('Game is in simulation mode, turns cannot be completed');
+      return null;
+    }
+
     // Verify it's the player's turn
     if (gameState.currentTurn.playerId !== playerId) {
       console.log('Not player\'s turn:', playerId);
@@ -117,16 +125,41 @@ class TurnManager {
   }
 
   _processTurnEnd(gameId, gameState, playerId) {
+    if (gameState.status !== GameStatus.PLAYING) {
+      console.log('Game is not in playing state:', gameState.status);
+      return null;
+    }
+
     this._markTurnAsCompleted(gameId, playerId);
     
     const completions = this._getCompletions(gameId);
     const skips = this._getSkips(gameId);
     const currentGrid = this._getCurrentGrid(gameId, gameState);
-
+        
     if (this._isRoundComplete(completions, skips)) {
       return this._handleRoundCompletion(gameId, gameState, currentGrid);
     } else {
-      return this._handleTurnSwitch(gameState, playerId, currentGrid);
+      const nextTeam = gameState.currentTurn.team === TeamColors.RED ? TeamColors.BLUE : TeamColors.RED;
+      const nextPlayer = this._findPlayerByTeam(gameState, nextTeam);
+      
+      if (!nextPlayer) {
+        console.error('Next player not found');
+        return null;
+      }
+      
+      const updatedState = {
+        ...gameState,
+        grid: currentGrid,
+        currentTurn: {
+          playerId: nextPlayer.id,
+          team: nextPlayer.team,
+          phase: TurnPhase.PLACEMENT,
+          startTime: Date.now(),
+          generation: gameState.currentTurn.generation
+        }
+      };
+
+      return { type: 'NEXT_TURN', state: updatedState };
     }
   }
 
@@ -170,27 +203,53 @@ class TurnManager {
   }
 
   _handleRoundCompletion(gameId, gameState, currentGrid) {
-    console.log('Current grid before generation:', 
-      currentGrid.map(row => row.map(cell => cell === 0 ? '.' : cell === 'red' ? 'R' : 'B').join('')).join('\n')
-    );
     
     const newGrid = ConwayRules.calculateNextGeneration(currentGrid);
-    
-    console.log('New grid after generation:', 
-      newGrid.map(row => row.map(cell => cell === 0 ? '.' : cell === 'red' ? 'R' : 'B').join('')).join('\n')
-    );
-    
     const { redTerritory, blueTerritory } = ConwayRules.calculateTerritory(newGrid);
 
     this._resetRoundTracking(gameId);
 
-    const nextPlayer = this._findPlayerByTeam(gameState, TeamColors.RED);
+    // Check for victory condition
     const updatedState = {
       ...gameState,
       grid: newGrid,
       redTerritory,
-      blueTerritory,
-      currentTurn: this._createNewTurn(nextPlayer, gameState)
+      blueTerritory
+    };
+
+    // Only check victory if territory threshold is enabled
+    if (gameState.settings.territoryThresholdEnabled) {
+      const victoryResult = VictoryCheck.checkVictory(updatedState);
+      if (victoryResult) {
+        return { 
+          type: 'VICTORY_DETECTED', 
+          state: {
+            ...victoryResult,
+            previousTurn: {
+              team: gameState.currentTurn.team,
+              playerId: gameState.currentTurn.playerId,
+              generation: gameState.currentTurn.generation
+            }
+          }
+        };
+      }
+    }
+
+    // If no victory, continue with next turn
+    const nextTeam = updatedState.currentTurn.team === TeamColors.RED ? TeamColors.BLUE : TeamColors.RED;
+    const nextPlayer = this._findPlayerByTeam(gameState, nextTeam);
+
+    if (!nextPlayer) {
+      console.error('Next player not found for team:', nextTeam);
+      return null;
+    }
+
+    updatedState.currentTurn = {
+      playerId: nextPlayer.id,
+      team: nextPlayer.team,
+      phase: TurnPhase.PLACEMENT,
+      startTime: Date.now(),
+      generation: gameState.currentTurn.generation + 1
     };
 
     return { type: 'NEW_GENERATION', state: updatedState };
@@ -231,7 +290,89 @@ class TurnManager {
     return { type: 'NEXT_TURN', state: updatedState };
   }
 
+  startSimulation(gameId, initialState) {
+    if (this.activeSimulations.has(gameId)) {
+      clearInterval(this.activeSimulations.get(gameId));
+    }
+
+    const simulationInterval = setInterval(() => {
+      const currentState = RoomManager.getRoom(gameId);
+      if (!currentState || currentState.status !== GameStatus.SIMULATING) {
+        this.cleanup(gameId);
+        return;
+      }
+
+      const nextState = VictoryCheck.simulateNextGeneration(currentState);
+      if (!nextState) {
+        this.cleanup(gameId);
+        return;
+      }
+
+      const updatedState = RoomManager.updateRoom(gameId, nextState);
+      console.log('Simulation state updated:', updatedState.status);
+
+      // Emit updates
+      this.io.to(gameId).emit('game_updated', updatedState);
+      
+      // Emit territory updates
+      this.io.to(gameId).emit('generation_completed', {
+        grid: updatedState.grid,
+        redTerritory: updatedState.redTerritory,
+        blueTerritory: updatedState.blueTerritory,
+        remainingGenerations: updatedState.currentTurn.remainingGenerations
+      });
+
+      // Check if simulation is complete
+      if (updatedState.status === GameStatus.FINISHED) {
+        console.log('Simulation completed, emitting final state');
+        this.io.to(gameId).emit('simulation_completed', {
+          winner: updatedState.winner,
+          finalGrid: updatedState.grid,
+          redTerritory: updatedState.redTerritory,
+          blueTerritory: updatedState.blueTerritory
+        });
+        this.cleanup(gameId);
+      }
+    }, 1000);
+
+    this.activeSimulations.set(gameId, simulationInterval);
+  }
+
+  handleSimulationEnd(gameId, gameState) {
+    // Return to normal gameplay with the correct next player
+    const previousTurn = gameState.previousTurn;
+    if (!previousTurn) {
+      console.error('No previous turn information found');
+      return null;
+    }
+
+    const nextTeam = previousTurn.team === TeamColors.RED ? TeamColors.BLUE : TeamColors.RED;
+    const nextPlayer = this._findPlayerByTeam(gameState, nextTeam);
+
+    if (!nextPlayer) {
+      console.error('Next player not found for resuming gameplay');
+      return null;
+    }
+
+    return {
+      ...gameState,
+      status: GameStatus.PLAYING,
+      currentTurn: {
+        playerId: nextPlayer.id,
+        team: nextPlayer.team,
+        phase: TurnPhase.PLACEMENT,
+        startTime: Date.now(),
+        generation: previousTurn.generation + 1
+      }
+    };
+  }
+
   startTimer(gameId, gameState, io) {
+    // Don't start timer if game is in simulation mode
+    if (gameState.status === GameStatus.SIMULATING) {
+      return;
+    }
+
     this._clearExistingTimeout(gameId);
     
     if (!gameState.currentTurn) {
@@ -255,8 +396,7 @@ class TurnManager {
   }
 
   _handleTimeoutExpired(gameId, gameState, io) {
-    // Prevent timeout handling if already processing
-    if (this.processingTimeout.has(gameId)) {
+    if (this.processingTimeout.has(gameId) || gameState.status !== GameStatus.PLAYING) {
       return;
     }
 
@@ -266,13 +406,11 @@ class TurnManager {
     const result = this.skipTurn(gameId, gameState, currentPlayerId);
     
     if (result) {
-      if (result.type === 'NEW_GENERATION') {
-        this._emitGenerationCompleted(io, gameId, result.state);
-      }
-      io.to(gameId).emit('game_updated', result.state);
-      
-      // Start timer for next turn if it's not a new generation
-      if (result.type === 'NEXT_TURN') {
+      if (result.type === 'VICTORY_DETECTED') {
+        this._clearExistingTimeout(gameId);
+        io.to(gameId).emit('game_updated', result.state);
+      } else {
+        io.to(gameId).emit('game_updated', result.state);
         this.startTimer(gameId, result.state, io);
       }
     }
@@ -294,6 +432,11 @@ class TurnManager {
     this.pendingGridUpdates.delete(gameId);
     this.moveSequences.delete(gameId);
     this.lastUpdateTime.delete(gameId);
+    VictoryCheck.cleanup(gameId);
+    if (this.simulationIntervals && this.simulationIntervals.has(gameId)) {
+      clearInterval(this.simulationIntervals.get(gameId));
+      this.simulationIntervals.delete(gameId);
+    }
   }
 }
 

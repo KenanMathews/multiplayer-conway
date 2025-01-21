@@ -5,9 +5,9 @@ import { useGame } from '../context/GameContext';
 import { GameStatus } from '../types/game';
 import Grid from '../components/game/Grid';
 import PatternControl from '../components/game/PatternControl';
-import Timer from '../components/game/Timer';
 import { Progress } from "@/components/ui/progress";
 import { socket } from '../utils/socket';
+import GameHeader from '../components/game/GameHeader';
 
 const Game = () => {
   const { id: gameId } = useParams();
@@ -37,23 +37,7 @@ const Game = () => {
     <div className="h-screen bg-background p-4">
       <div className="container mx-auto h-full flex flex-col gap-4 max-w-6xl">
         {/* Top Stats Bar */}
-        <Card className="p-2">
-          <div className="flex justify-between items-center">
-            <div className="flex gap-4">
-              {gameState.players.map((player) => (
-                <div key={player.id} className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${player.team === 'red' ? 'bg-red-500' : 'bg-blue-500'}`} />
-                  <span className="text-sm">{player.username}</span>
-                </div>
-              ))}
-            </div>
-            <Timer
-              turnStartTime={gameState.currentTurn.startTime}
-              turnDuration={gameState.settings.turnTime}
-              isCurrentTurn={isCurrentTurn}
-            />
-          </div>
-        </Card>
+        <GameHeader isCurrentTurn={isCurrentTurn} />
 
         {/* Main Game Area */}
         <div className="flex gap-4 flex-1 min-h-0">

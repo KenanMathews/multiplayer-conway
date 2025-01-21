@@ -10,6 +10,7 @@ import { Toaster } from "@/components/ui/toaster";
 import CreateGameDialog from '../components/lobby/CreateGameDialog';
 import { useGame } from '../context/GameContext';
 import { useToast } from "@/hooks/use-toast";
+import { createGameSettings } from "../types/game";
 
 const Home = () => {
   const navigate = useNavigate();
@@ -32,12 +33,16 @@ const Home = () => {
     setIsCreating(true);
     
     try {
+      const defaultSettings = createGameSettings();
+      
       const settings = {
-        gridSize: parseInt(gridSize),
-        turnTime: parseInt(turnTime),
+        gridSize: parseInt(gridSize) || defaultSettings.gridSize,
+        turnTime: parseInt(turnTime) || defaultSettings.turnTime,
         maxTimeoutWarnings: 3,
-        maxPlayers: 2,
-        minPlayersToStart: 2
+        maxPlayers: 2, 
+        minPlayersToStart: 2, 
+        territoryThresholdEnabled: defaultSettings.territoryThresholdEnabled,
+        territoryThreshold: defaultSettings.territoryThreshold
       };
       
       const gameId = await createNewGame(username, selectedTeam, settings);
