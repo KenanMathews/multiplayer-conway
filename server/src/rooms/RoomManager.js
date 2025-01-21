@@ -205,7 +205,6 @@ class RoomManager {
 
   isValidPatternMove(gameId, playerId, x, y, pattern) {
     const room = this.getRoom(gameId);
-    console.log('isValidPatternMove', room, pattern);
     if (!room || !this._isPatternTurn(room)) return false;
 
     if (room.currentTurn.phase !== TurnPhase.PLACEMENT) {

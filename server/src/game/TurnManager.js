@@ -427,7 +427,6 @@ class TurnManager {
         phase: TurnPhase.PLACEMENT
       }
     };
-    console.log('Pattern size confirmed:', updatedState.currentTurn.patternSize);
   
     return { type: 'PATTERN_SIZE_CONFIRMED', state: updatedState };
   }
