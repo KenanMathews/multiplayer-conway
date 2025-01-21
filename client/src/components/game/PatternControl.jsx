@@ -22,23 +22,45 @@ const PatternControl = ({
   const { gameState, confirmPatternSize } = useGame();
   const [selectedPatternKey, setSelectedPatternKey] = useState(null);
   const [rotation, setRotation] = useState(0);
+  const [randomizedPatterns, setRandomizedPatterns] = useState({});
 
   const isPatternSizePhase = gameState.currentTurn?.phase === TurnPhase.PATTERN_SIZE_SELECTION;
   const isPatternPlacementPhase = gameState.currentTurn?.phase === TurnPhase.PLACEMENT;
   const patternSize = gameState.currentTurn?.patternSize;
+
+  const getRandomPatterns = (patterns, count = 2) => {
+    const shuffled = [...patterns].sort(() => 0.5 - Math.random());
+    return shuffled.slice(0, count);
+  };
+
+  const getAllAvailablePatterns = (maxSize) => {
+    const patternsBySize = {};
+    for (let size = 1; size <= maxSize; size++) {
+      const sizePatterns = PatternManager.getPatternsBySize(size);
+      if (sizePatterns.length > 0) {
+        patternsBySize[size] = getRandomPatterns(sizePatterns, 2);
+      }
+    }
+    return patternsBySize;
+  };
 
   useEffect(() => {
     if (!patternSize) {
       setSelectedPatternKey(null);
       setRotation(0);
       setPreviewPattern(null);
+      setRandomizedPatterns({});
       return;
     }
 
     if (isPatternPlacementPhase) {
-      const availablePatterns = PatternManager.getPatternsBySize(patternSize);
-      if (availablePatterns.length > 0) {
-        const firstPattern = availablePatterns[0];
+      const patterns = getAllAvailablePatterns(patternSize);
+      setRandomizedPatterns(patterns);
+      
+      // Select first available pattern
+      const firstSize = Object.keys(patterns)[0];
+      if (firstSize && patterns[firstSize].length > 0) {
+        const firstPattern = patterns[firstSize][0];
         setSelectedPatternKey(firstPattern.key);
         setRotation(0);
         setPreviewPattern(PatternManager.getPattern(firstPattern.key).pattern);
@@ -77,13 +99,11 @@ const PatternControl = ({
     return null;
   }
 
-  const availablePatterns = PatternManager.getPatternsBySize(patternSize);
-
-  if (availablePatterns.length === 0) {
+  if (Object.keys(randomizedPatterns).length === 0) {
     return (
       <Card className="w-48 p-4">
         <div className="text-center text-muted-foreground">
-          No patterns available for {patternSize}x{patternSize} grid
+          No patterns available
         </div>
       </Card>
     );
@@ -93,21 +113,51 @@ const PatternControl = ({
     <TooltipProvider>
       <div className="flex flex-col gap-4">
         <Card className="w-48 p-4">
-          <div className="space-y-4">
-            <div className="text-sm font-medium border-b pb-2">
-              {patternSize}×{patternSize} Patterns
-            </div>
-            <div className="space-y-2">
-              {availablePatterns.map((pattern) => (
-                <PatternButton
-                  key={pattern.key}
-                  pattern={PatternManager.getPattern(pattern.key)}
-                  isSelected={selectedPatternKey === pattern.key}
-                  onClick={() => handlePatternSelect(pattern.key)}
-                  currentTeam={currentTeam}
-                />
-              ))}
-            </div>
+          <div className="grid grid-cols-2 gap-2">
+            {Object.entries(randomizedPatterns)
+            .sort(([sizeA], [sizeB]) => Number(sizeB) - Number(sizeA))
+            .map(([size, patterns]) =>
+              patterns.map((pattern) => {
+                const patternData = PatternManager.getPattern(pattern.key);
+                return (
+                  <Tooltip key={pattern.key}>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant={selectedPatternKey === pattern.key ? "default" : "outline"}
+                        className="p-2 h-auto aspect-square"
+                        onClick={() => handlePatternSelect(pattern.key)}
+                      >
+                        <div 
+                          className="grid gap-0.5"
+                          style={{ 
+                            gridTemplateColumns: `repeat(${patternData.pattern[0].length}, 6px)`
+                          }}
+                        >
+                          {patternData.pattern.map((row, i) => 
+                            row.map((cell, j) => (
+                              <div
+                                key={`${i}-${j}`}
+                                className={`
+                                  w-1.5 h-1.5 border-[0.5px]
+                                  ${cell ? (currentTeam === 'red' ? 'bg-red-500' : 'bg-blue-500') : 'bg-background'}
+                                `}
+                              />
+                            ))
+                          )}
+                        </div>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" align="start" className="max-w-[200px]">
+                      <div className="space-y-1">
+                        <p className="font-semibold">{patternData.name}</p>
+                        <p className="text-sm text-muted-foreground">{patternData.description}</p>
+                        <p className="text-xs text-muted-foreground">Size: {size}×{size}</p>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                );
+              })
+            )}
           </div>
         </Card>
 
@@ -131,46 +181,5 @@ const PatternControl = ({
     </TooltipProvider>
   );
 };
-
-const PatternButton = ({ pattern, isSelected, onClick, currentTeam }) => (
-  <Tooltip>
-    <TooltipTrigger asChild>
-      <Button
-        variant={isSelected ? "default" : "outline"}
-        className="w-full h-auto p-2"
-        onClick={onClick}
-      >
-        <div className="space-y-1 w-full">
-          <div className="text-xs font-medium">{pattern.name}</div>
-          <div 
-            className="grid gap-0.5 mx-auto" 
-            style={{ 
-              gridTemplateColumns: `repeat(${pattern.pattern[0].length}, 8px)`
-            }}
-          >
-            {pattern.pattern.map((row, i) => 
-              row.map((cell, j) => (
-                <div
-                  key={`${i}-${j}`}
-                  className={`
-                    w-2 h-2 border-[0.5px]
-                    ${cell ? (currentTeam === 'red' ? 'bg-red-500' : 'bg-blue-500') : 'bg-background'}
-                  `}
-                />
-              ))
-            )}
-          </div>
-        </div>
-      </Button>
-    </TooltipTrigger>
-    <TooltipContent side="right" align="start" className="max-w-[200px]">
-      <div className="space-y-1">
-        <p className="font-semibold">{pattern.name}</p>
-        <p className="text-sm text-muted-foreground">{pattern.description}</p>
-        <p className="text-xs text-muted-foreground">Type: {pattern.type}</p>
-      </div>
-    </TooltipContent>
-  </Tooltip>
-);
 
 export default PatternControl;

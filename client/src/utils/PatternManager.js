@@ -1,7 +1,347 @@
 // utils/PatternManager.js
 
 // Common Conway patterns
+const ADDITIONAL_PATTERNS = {
+  // 3x3 Patterns
+  blse_seed: {
+    name: "BLSE Seed",
+    pattern: [
+      [1, 1, 1],
+      [1, 0, 1],
+      [0, 0, 1]
+    ],
+    category: "3x3 Patterns",
+    description: "Seed pattern for Block-laying switch engine",
+    type: "Generator"
+  },
+  b_heptomino: {
+    name: "B-heptomino",
+    pattern: [
+      [0, 1, 1],
+      [1, 1, 1],
+      [0, 1, 0]
+    ],
+    category: "3x3 Patterns",
+    description: "A common Methuselah pattern that evolves chaotically",
+    type: "Methuselah"
+  },
+  pi_heptomino: {
+    name: "Pi-heptomino",
+    pattern: [
+      [1, 1, 1],
+      [1, 0, 1],
+      [1, 0, 1]
+    ],
+    category: "3x3 Patterns",
+    description: "Pi-shaped pattern that creates interesting evolution",
+    type: "Methuselah"
+  },
+  c_heptomino: {
+    name: "C-heptomino",
+    pattern: [
+      [1, 1, 1],
+      [1, 0, 0],
+      [1, 0, 1]
+    ],
+    category: "3x3 Patterns",
+    description: "C-shaped pattern with chaotic evolution",
+    type: "Methuselah"
+  },
+
+  // 4x4 Patterns
+  traffic_light: {
+    name: "Traffic Light",
+    pattern: [
+      [0, 1, 1, 0],
+      [0, 1, 1, 0],
+      [0, 1, 1, 0],
+      [0, 1, 1, 0]
+    ],
+    category: "4x4 Patterns",
+    description: "Simple period 2 oscillator resembling traffic lights",
+    type: "Oscillator"
+  },
+  box_ties: {
+    name: "Box-ties",
+    pattern: [
+      [1, 1, 1, 1],
+      [1, 0, 0, 1],
+      [1, 0, 0, 1],
+      [1, 1, 1, 1]
+    ],
+    category: "4x4 Patterns",
+    description: "Stable pattern that looks like a box with ties",
+    type: "Still Life"
+  },
+  mock_block: {
+    name: "Mock Block",
+    pattern: [
+      [0, 1, 1, 0],
+      [1, 0, 0, 1],
+      [1, 0, 0, 1],
+      [0, 1, 1, 0]
+    ],
+    category: "4x4 Patterns",
+    description: "Stable pattern that resembles a block",
+    type: "Still Life"
+  },
+
+  // 5x5 Patterns
+  dollar_sign: {
+    name: "Dollar Sign",
+    pattern: [
+      [0, 1, 1, 1, 0],
+      [1, 0, 1, 0, 0],
+      [0, 1, 1, 1, 0],
+      [0, 0, 1, 0, 1],
+      [0, 1, 1, 1, 0]
+    ],
+    category: "5x5 Patterns",
+    description: "Pattern resembling a dollar sign symbol",
+    type: "Still Life"
+  },
+  octagon2: {
+    name: "Octagon 2",
+    pattern: [
+      [0, 1, 1, 1, 0],
+      [1, 0, 0, 0, 1],
+      [1, 0, 0, 0, 1],
+      [1, 0, 0, 0, 1],
+      [0, 1, 1, 1, 0]
+    ],
+    category: "5x5 Patterns",
+    description: "Stable octagonal pattern",
+    type: "Still Life"
+  },
+  cross: {
+    name: "Cross",
+    pattern: [
+      [0, 0, 1, 0, 0],
+      [0, 0, 1, 0, 0],
+      [1, 1, 1, 1, 1],
+      [0, 0, 1, 0, 0],
+      [0, 0, 1, 0, 0]
+    ],
+    category: "5x5 Patterns",
+    description: "Cross-shaped pattern that evolves interestingly",
+    type: "Methuselah"
+  },
+
+  // 6x6 Patterns
+  dragon: {
+    name: "Dragon",
+    pattern: [
+      [1, 1, 0, 0, 0, 0],
+      [1, 0, 1, 0, 0, 0],
+      [0, 1, 1, 0, 0, 0],
+      [0, 0, 0, 1, 1, 0],
+      [0, 0, 0, 1, 0, 1],
+      [0, 0, 0, 0, 1, 1]
+    ],
+    category: "6x6 Patterns",
+    description: "Dragon-shaped pattern with interesting evolution",
+    type: "Methuselah"
+  },
+  turtle: {
+    name: "Turtle",
+    pattern: [
+      [0, 0, 1, 1, 0, 0],
+      [0, 1, 0, 0, 1, 0],
+      [0, 1, 0, 0, 1, 0],
+      [1, 1, 0, 0, 1, 1],
+      [0, 0, 1, 1, 0, 0],
+      [0, 0, 1, 1, 0, 0]
+    ],
+    category: "6x6 Patterns",
+    description: "Turtle-shaped stable pattern",
+    type: "Still Life"
+  },
+  aircraft_carrier_bridge: {
+    name: "Aircraft Carrier Bridge",
+    pattern: [
+      [1, 1, 0, 0, 1, 1],
+      [1, 0, 0, 0, 0, 1],
+      [0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0],
+      [1, 0, 0, 0, 0, 1],
+      [1, 1, 0, 0, 1, 1]
+    ],
+    category: "6x6 Patterns",
+    description: "Stable pattern combining aircraft carriers with bridges",
+    type: "Still Life"
+  },
+
+  // 7x7 Patterns
+  burloaferimeter: {
+    name: "Burloaferimeter",
+    pattern: [
+      [0, 0, 1, 1, 1, 0, 0],
+      [0, 1, 0, 0, 0, 1, 0],
+      [1, 0, 0, 0, 0, 0, 1],
+      [1, 0, 0, 0, 0, 0, 1],
+      [1, 0, 0, 0, 0, 0, 1],
+      [0, 1, 0, 0, 0, 1, 0],
+      [0, 0, 1, 1, 1, 0, 0]
+    ],
+    category: "7x7 Patterns",
+    description: "Stable pattern with loafer-like properties",
+    type: "Still Life"
+  },
+  elevator: {
+    name: "Elevator",
+    pattern: [
+      [0, 0, 1, 1, 1, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0],
+      [1, 0, 1, 1, 1, 0, 1],
+      [1, 0, 1, 0, 1, 0, 1],
+      [1, 0, 1, 1, 1, 0, 1],
+      [0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 1, 1, 1, 0, 0]
+    ],
+    category: "7x7 Patterns",
+    description: "Period 2 oscillator that moves up and down",
+    type: "Oscillator"
+  },
+  halfback: {
+    name: "Halfback",
+    pattern: [
+      [0, 0, 1, 1, 1, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0],
+      [1, 0, 0, 1, 0, 0, 1],
+      [1, 1, 1, 1, 1, 1, 1],
+      [1, 0, 0, 1, 0, 0, 1],
+      [0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 1, 1, 1, 0, 0]
+    ],
+    category: "7x7 Patterns",
+    description: "Complex oscillator with period 4",
+    type: "Oscillator"
+  },
+
+  // 8x8 Patterns
+  spark_coil: {
+    name: "Spark Coil",
+    pattern: [
+      [0, 0, 1, 1, 1, 1, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0],
+      [1, 0, 0, 1, 1, 0, 0, 1],
+      [1, 0, 1, 0, 0, 1, 0, 1],
+      [1, 0, 1, 0, 0, 1, 0, 1],
+      [1, 0, 0, 1, 1, 0, 0, 1],
+      [0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 1, 1, 1, 1, 0, 0]
+    ],
+    category: "8x8 Patterns",
+    description: "Period 2 oscillator with sparks",
+    type: "Oscillator"
+  },
+  rattlesnake: {
+    name: "Rattlesnake",
+    pattern: [
+      [1, 1, 0, 0, 0, 0, 1, 1],
+      [1, 1, 0, 0, 0, 0, 1, 1],
+      [0, 0, 0, 1, 1, 0, 0, 0],
+      [0, 0, 1, 0, 0, 1, 0, 0],
+      [0, 0, 1, 0, 0, 1, 0, 0],
+      [0, 0, 0, 1, 1, 0, 0, 0],
+      [1, 1, 0, 0, 0, 0, 1, 1],
+      [1, 1, 0, 0, 0, 0, 1, 1]
+    ],
+    category: "8x8 Patterns",
+    description: "Stable pattern resembling a coiled snake",
+    type: "Still Life"
+  },
+  washing_machine: {
+    name: "Washing Machine",
+    pattern: [
+      [0, 0, 1, 1, 1, 1, 0, 0],
+      [0, 1, 0, 0, 0, 0, 1, 0],
+      [1, 0, 0, 1, 1, 0, 0, 1],
+      [1, 0, 1, 0, 0, 1, 0, 1],
+      [1, 0, 1, 0, 0, 1, 0, 1],
+      [1, 0, 0, 1, 1, 0, 0, 1],
+      [0, 1, 0, 0, 0, 0, 1, 0],
+      [0, 0, 1, 1, 1, 1, 0, 0]
+    ],
+    category: "8x8 Patterns",
+    description: "Period 2 oscillator that resembles a washing machine",
+    type: "Oscillator"
+  },
+
+  // 9x9 Patterns
+  phoenix: {
+    name: "Phoenix",
+    pattern: [
+      [1, 1, 0, 0, 0, 0, 0, 1, 1],
+      [1, 1, 0, 0, 0, 0, 0, 1, 1],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 1, 1, 1, 0, 0, 0],
+      [0, 0, 0, 1, 0, 1, 0, 0, 0],
+      [0, 0, 0, 1, 1, 1, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [1, 1, 0, 0, 0, 0, 0, 1, 1],
+      [1, 1, 0, 0, 0, 0, 0, 1, 1]
+    ],
+    category: "9x9 Patterns",
+    description: "Period 2 oscillator that rebuilds itself",
+    type: "Oscillator"
+  },
+  snark: {
+    name: "Snark",
+    pattern: [
+      [0, 0, 1, 1, 1, 1, 1, 0, 0],
+      [0, 1, 0, 0, 0, 0, 0, 1, 0],
+      [1, 0, 1, 0, 0, 0, 1, 0, 1],
+      [1, 0, 0, 1, 0, 1, 0, 0, 1],
+      [1, 0, 0, 0, 1, 0, 0, 0, 1],
+      [1, 0, 0, 1, 0, 1, 0, 0, 1],
+      [1, 0, 1, 0, 0, 0, 1, 0, 1],
+      [0, 1, 0, 0, 0, 0, 0, 1, 0],
+      [0, 0, 1, 1, 1, 1, 1, 0, 0]
+    ],
+    category: "9x9 Patterns",
+    description: "Stable symmetric pattern with interesting properties",
+    type: "Still Life"
+  },
+  jason_p156: {
+    name: "Jason's P156",
+    pattern: [
+      [0, 0, 1, 1, 1, 1, 1, 0, 0],
+      [0, 1, 0, 0, 0, 0, 0, 1, 0],
+      [1, 0, 0, 1, 1, 1, 0, 0, 1],
+      [1, 0, 1, 0, 0, 0, 1, 0, 1],
+      [1, 0, 1, 0, 0, 0, 1, 0, 1],
+      [1, 0, 1, 0, 0, 0, 1, 0, 1],
+      [1, 0, 0, 1, 1, 1, 0, 0, 1],
+      [0, 1, 0, 0, 0, 0, 0, 1, 0],
+      [0, 0, 1, 1, 1, 1, 1, 0, 0]
+    ],
+    category: "9x9 Patterns",
+    description: "Period 156 oscillator discovered by Jason Summers",
+    type: "Oscillator"
+  },
+  legend: {
+    name: "Legend",
+    pattern: [
+      [0, 0, 1, 1, 1, 1, 1, 0, 0],
+      [0, 1, 0, 0, 0, 0, 0, 1, 0],
+      [1, 0, 1, 1, 0, 1, 1, 0, 1],
+      [1, 0, 1, 0, 1, 0, 1, 0, 1],
+      [1, 0, 0, 1, 1, 1, 0, 0, 1],
+      [1, 0, 1, 0, 1, 0, 1, 0, 1],
+      [1, 0, 1, 1, 0, 1, 1, 0, 1],
+      [0, 1, 0, 0, 0, 0, 0, 1, 0],
+      [0, 0, 1, 1, 1, 1, 1, 0, 0]
+    ],
+    category: "9x9 Patterns",
+    description: "Complex stable pattern with symmetrical design",
+    type: "Still Life"
+  }
+};
+
+
 const PATTERNS = {
+  ...ADDITIONAL_PATTERNS,
   // 3x3 Patterns
   glider: {
     name: "Glider",
