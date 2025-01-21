@@ -211,8 +211,8 @@ class RoomManager {
       return false;
     }
 
-    if (pattern.length !== room.currentTurn.patternSize ||
-        pattern[0].length !== room.currentTurn.patternSize) {
+    if (pattern.length > room.currentTurn.patternSize ||
+        pattern[0].length > room.currentTurn.patternSize) {
       return false;
     }
 
