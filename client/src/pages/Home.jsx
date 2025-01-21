@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,7 +8,8 @@ import { Separator } from '@/components/ui/separator';
 import { Gamepad2, Users, Loader2 } from 'lucide-react';
 import { Toaster } from "@/components/ui/toaster";
 import CreateGameDialog from '../components/lobby/CreateGameDialog';
-import { useGame } from '../context/GameContext';
+import AvailableRooms from '../components/lobby/AvailableRooms';
+import { useGame } from '@/context/GameContext';
 import { useToast } from "@/hooks/use-toast";
 import { createGameSettings } from "../types/game";
 
@@ -26,9 +27,17 @@ const Home = () => {
   const [turnTime, setTurnTime] = useState('30');
   const [isCreating, setIsCreating] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
+  const [isPrivate, setIsPrivate] = useState(false);
 
   const handleCreateGame = async () => {
-    if (!username.trim() || !selectedTeam) return;
+    if (!username.trim() || !selectedTeam) {
+      toast({
+        variant: "destructive",
+        title: "Missing information",
+        description: "Please enter a username and select a team",
+      });
+      return;
+    }
     
     setIsCreating(true);
     
@@ -41,6 +50,7 @@ const Home = () => {
         maxTimeoutWarnings: 3,
         maxPlayers: 2, 
         minPlayersToStart: 2, 
+        isPrivate,
         territoryThresholdEnabled: defaultSettings.territoryThresholdEnabled,
         territoryThreshold: defaultSettings.territoryThreshold
       };
@@ -60,10 +70,7 @@ const Home = () => {
     }
   };
 
-  const handleJoinGame = async (e) => {
-    e?.preventDefault(); // Make preventDefault optional for keyboard events
-    
-    // Basic validation
+  const handleJoinGame = async (codeToJoin = gameCode) => {
     if (!username.trim()) {
       toast({
         variant: "destructive",
@@ -73,11 +80,11 @@ const Home = () => {
       return;
     }
     
-    if (!gameCode.trim()) {
+    if (!codeToJoin.trim()) {
       toast({
         variant: "destructive",
         title: "Game code required",
-        description: "Please enter a game code to join",
+        description: "Please enter a game code or select a room to join",
       });
       return;
     }
@@ -86,9 +93,8 @@ const Home = () => {
     
     setIsJoining(true);
     try {
-      console.log('Attempting to join game:', { gameCode, username });
-      await joinGame(gameCode.trim(), username.trim());
-      navigate(`/lobby/${gameCode.trim()}`);
+      await joinGame(codeToJoin.trim(), username.trim());
+      navigate(`/lobby/${codeToJoin.trim()}`);
     } catch (error) {
       console.error('Join game error:', error);
       toast({
@@ -107,35 +113,39 @@ const Home = () => {
     }
   };
 
-  // Compute button disabled state
-  const isJoinButtonDisabled = !username.trim() || !gameCode.trim() || isJoining || isCreating;
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted flex items-center justify-center p-4">
       <Toaster />
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-3xl font-bold">Conway's Game</CardTitle>
-          <CardDescription>
-            Multiplayer Strategy Edition
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="username">Username</Label>
-            <Input
-              id="username"
-              placeholder="Enter your username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              onKeyPress={handleKeyPress}
-              disabled={isCreating || isJoining}
-            />
-          </div>
+      <div className="w-full max-w-2xl space-y-4">
+        {/* Header Card */}
+        <Card className="text-center">
+          <CardHeader>
+            <CardTitle className="text-3xl font-bold">Conway's Game</CardTitle>
+            <CardDescription>
+              Multiplayer Strategy Edition
+            </CardDescription>
+          </CardHeader>
+        </Card>
 
-          <Separator className="my-4" />
-          
-          <div className="space-y-4">
+        {/* Main Content Card */}
+        <Card>
+          <CardContent className="pt-6 space-y-6">
+            {/* Username Section */}
+            <div className="space-y-2">
+              <Label htmlFor="username">Username</Label>
+              <Input
+                id="username"
+                placeholder="Enter your username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                onKeyPress={handleKeyPress}
+                disabled={isCreating || isJoining}
+              />
+            </div>
+
+            <Separator />
+
+            {/* Create Game Button */}
             <Button 
               className="w-full h-12"
               onClick={() => setIsDialogOpen(true)}
@@ -149,37 +159,58 @@ const Home = () => {
               {isCreating ? 'Creating Game...' : 'Create New Game'}
             </Button>
 
-            <form onSubmit={handleJoinGame} className="space-y-2">
-              <Label htmlFor="gameCode">Or Join Existing Game</Label>
-              <div className="flex space-x-2">
-                <Input
-                  id="gameCode"
-                  placeholder="Enter game code"
-                  value={gameCode}
-                  onChange={(e) => setGameCode(e.target.value.toUpperCase())}
-                  onKeyPress={handleKeyPress}
-                  disabled={isCreating || isJoining}
-                />
-                <Button 
-                  type="submit"
-                  disabled={isJoinButtonDisabled}
-                  variant="secondary"
-                  className="min-w-[50px]"
-                >
-                  {isJoining ? (
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                  ) : (
-                    <Users className="h-5 w-5" />
-                  )}
-                </Button>
+            <Separator />
+
+            {/* Join Game Section */}
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="gameCode">Join with Game Code</Label>
+                <div className="flex space-x-2">
+                  <Input
+                    id="gameCode"
+                    placeholder="Enter game code"
+                    value={gameCode}
+                    onChange={(e) => setGameCode(e.target.value.toUpperCase())}
+                    onKeyPress={handleKeyPress}
+                    disabled={isCreating || isJoining}
+                  />
+                  <Button 
+                    onClick={() => handleJoinGame()}
+                    disabled={!username.trim() || !gameCode.trim() || isJoining || isCreating}
+                    variant="secondary"
+                    className="min-w-[100px]"
+                  >
+                    {isJoining ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <>
+                        <Users className="h-5 w-5 mr-2" />
+                        Join
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
-            </form>
-          </div>
-        </CardContent>
-        <CardFooter className="text-center text-sm text-muted-foreground">
-          Challenge your friends in this multiplayer version of Conway's Game of Life
-        </CardFooter>
-      </Card>
+
+              <Separator />
+
+              {/* Available Rooms Section */}
+              <AvailableRooms 
+                onJoinRoom={(roomId) => handleJoinGame(roomId)}
+                username={username}
+                isJoining={isJoining}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Footer Card */}
+        <Card className="bg-muted/50">
+          <CardContent className="p-4 text-center text-sm text-muted-foreground">
+            Challenge your friends in this multiplayer version of Conway's Game of Life
+          </CardContent>
+        </Card>
+      </div>
 
       <CreateGameDialog
         open={isDialogOpen}
@@ -192,6 +223,8 @@ const Home = () => {
         setTurnTime={setTurnTime}
         onCreateGame={handleCreateGame}
         isCreating={isCreating}
+        isPrivate={isPrivate}
+        setIsPrivate={setIsPrivate}
       />
     </div>
   );

@@ -3,7 +3,7 @@ const PlayerManager = require("../rooms/PlayerManager");
 const TurnManager = require("../game/TurnManager");
 const { ConwayRules } = require("../game/ConwayRules");
 const VictoryCheck = require("../game/VictoryCheck");
-const { GameStatus } = require("../constants/gameConstants");
+const { GameStatus, TurnPhase } = require("../constants/gameConstants");
 
 class SocketHandlers {
   constructor(io) {
@@ -23,8 +23,19 @@ class SocketHandlers {
 
       socket.join(gameId);
       socket.emit("game_updated", updatedGameState);
+      
+      this.broadcastRoomsUpdate();
     } catch (error) {
       this.handleError(socket, "Error creating game", error);
+    }
+  }
+
+  handleGetRooms(socket) {
+    try {
+      const availableRooms = RoomManager.getAvailableRooms();
+      socket.emit('rooms_list', availableRooms);
+    } catch (error) {
+      this.handleError(socket, "Error getting rooms list", error);
     }
   }
 
@@ -35,6 +46,16 @@ class SocketHandlers {
         throw new Error("Game not found");
       }
 
+      if (!RoomManager.canJoinRoom(gameId)) {
+        throw new Error("Cannot join this game");
+      }
+
+      // Add cleanup handler for this specific room
+      socket.on("leave_game", () => {
+        this.handlePlayerLeaveRoom(socket, gameId);
+        socket.leave(gameId);
+      });
+
       const updatedGameState = PlayerManager.addPlayer(gameId, {
         id: socket.id,
         username,
@@ -43,9 +64,60 @@ class SocketHandlers {
 
       socket.join(gameId);
       this.io.to(gameId).emit("game_updated", updatedGameState);
+      
+      if (!gameState.settings.isPrivate) {
+        this.broadcastRoomsUpdate();
+      }
     } catch (error) {
       this.handleError(socket, "Error joining game", error);
     }
+  }
+
+  handlePlayerLeaveRoom(socket, roomId) {
+    try {
+      const gameState = RoomManager.getRoom(roomId);
+      if (!gameState) return;
+
+      const isPrivate = gameState?.settings.isPrivate;
+      const wasWaiting = gameState.status === 'waiting';
+      
+      const updatedGameState = PlayerManager.removePlayer(roomId, socket.id);
+      if (!updatedGameState) return;
+
+      // If the game hasn't started and there are no players, or if it was waiting
+      // and there's only one player left, remove the room
+      if ((wasWaiting && updatedGameState.players.length < 2) || 
+          updatedGameState.players.length === 0) {
+        
+        TurnManager.cleanup(roomId);
+        VictoryCheck.cleanup(roomId);
+        RoomManager.removeRoom(roomId);
+        
+        if (updatedGameState.players.length === 1) {
+          this.io.to(roomId).emit("game_closed", {
+            reason: "Other player left the game"
+          });
+        }
+        
+        if (!isPrivate) {
+          this.broadcastRoomsUpdate();
+        }
+        return;
+      }
+
+      this.io.to(roomId).emit("game_updated", updatedGameState);
+      
+      if (!isPrivate) {
+        this.broadcastRoomsUpdate();
+      }
+    } catch (error) {
+      console.error("Error handling player leave:", error);
+    }
+  }
+
+  broadcastRoomsUpdate() {
+    const availableRooms = RoomManager.getAvailableRooms();
+    this.io.emit('rooms_list', availableRooms);
   }
 
   handleTeamSelection(socket, { gameId, team }) {
@@ -142,7 +214,7 @@ class SocketHandlers {
 
       // Record the pattern placement in the sequence
       TurnManager.addMoveToSequence(gameId, {
-        type: "PATTERN_PLACEMENT",
+        type: TurnPhase.PLACEMENT,
         pattern,
         x,
         y,
@@ -181,6 +253,29 @@ class SocketHandlers {
     }
   }
 
+  handlePatternSizeConfirmation(socket, { gameId }) {
+    try {
+      const gameState = RoomManager.getRoom(gameId);
+      if (!gameState || gameState.currentTurn.playerId !== socket.id) {
+        throw new Error('Invalid pattern size confirmation');
+      }
+
+      const result = TurnManager.handlePatternSizeConfirmation(gameId, gameState, socket.id);
+      if (result) {
+        const updatedState = RoomManager.updateRoom(gameId, {
+          currentTurn: {
+            ...gameState.currentTurn,
+            phase: TurnPhase.PLACEMENT
+          }
+        });
+    
+        this.io.to(gameId).emit('game_updated', updatedState);
+      }
+    } catch (error) {
+      this.handleError(socket, 'Error confirming pattern size', error);
+    }
+  }
+
   handleDisconnect(socket) {
     console.log("User disconnected:", socket.id);
     Array.from(socket.rooms).forEach((roomId) => {
@@ -189,6 +284,8 @@ class SocketHandlers {
         if (updatedGameState) {
           TurnManager.cleanupGame(roomId);
           this.io.to(roomId).emit("game_updated", updatedGameState);
+          this.broadcastRoomsUpdate();
+          this.handlePlayerLeaveRoom(socket, roomId);
         }
       }
     });
@@ -225,7 +322,6 @@ class SocketHandlers {
       if (!result) return;
 
       const updatedState = RoomManager.updateRoom(gameId, result.state);
-      console.log('Turn completed, updated state:', updatedState.status);
 
       if (result.type === 'VICTORY_DETECTED') {
         this.startSimulation(gameId, updatedState);
@@ -373,6 +469,8 @@ class SocketHandlers {
   }
 
   attachHandlers(socket) {
+    socket.on("get_rooms", () => this.handleGetRooms(socket));
+
     socket.on("create_game", (data) => this.handleGameCreation(socket, data));
     socket.on("join_game", (data) => this.handleGameJoin(socket, data));
     socket.on("select_team", (data) => this.handleTeamSelection(socket, data));
@@ -387,9 +485,19 @@ class SocketHandlers {
     // Territory threshold and simulation events
     socket.on("skip_simulation", (data) => this.handleSimulationSkip(socket, data));
     socket.on("update_threshold", (data) => this.handleThresholdUpdate(socket, data));
+    socket.on('confirm_pattern_size', (data) => this.handlePatternSizeConfirmation(socket, data));
     
     // Disconnection handling
     socket.on("disconnect", () => this.handleDisconnect(socket));
+
+    //Leaving scenario
+    socket.on("leave_game", (data) => {
+      if (data?.gameId) {
+        console.log("Leaving game:", data.gameId);
+        this.handlePlayerLeaveRoom(socket, data.gameId);
+        socket.leave(data.gameId);
+      }
+    });
     
     // Error handling
     socket.on("error", (error) => this.handleError(socket, "Socket error", error));

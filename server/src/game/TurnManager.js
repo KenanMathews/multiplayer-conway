@@ -1,6 +1,6 @@
 // src/game/TurnManager.js
 const { ConwayRules } = require("./ConwayRules");
-const { TeamColors, TurnPhase, GameStatus } = require('../constants/gameConstants');
+const { TeamColors, TurnPhase, GameStatus, PATTERN_RATIO } = require('../constants/gameConstants');
 const VictoryCheck = require('./VictoryCheck');
 const RoomManager = require('../rooms/RoomManager');
 
@@ -21,20 +21,28 @@ class TurnManager {
       console.error('Player not found:', playerId);
       return gameState;
     }
-
+  
+    // Check if it should be a pattern turn
+    const generation = this._getCurrentGeneration(gameState);
+    const isPatternTurn = generation % PATTERN_RATIO === 0 && 
+      room.currentTurn.phase === TurnPhase.PATTERN_SIZE_SELECTION ||
+      room.currentTurn.phase === TurnPhase.PLACEMENT ;
+    const patternSize = isPatternTurn ? Math.floor(Math.random() * 7) + 3 : null;
+  
     const currentTurn = {
       playerId,
       team: player.team,
-      phase: TurnPhase.PLACEMENT,
+      phase: isPatternTurn ? TurnPhase.PATTERN_SIZE_SELECTION : TurnPhase.PLACEMENT,
       startTime: Date.now(),
-      generation: this._getCurrentGeneration(gameState)
+      generation,
+      patternSize
     };
-
+  
     // Reset move sequence for new turn
     this.moveSequences.set(gameState.id, []);
     this.lastUpdateTime.set(gameState.id, Date.now());
     this._resetSkipStatus(gameState.id, playerId);
-
+  
     return {
       ...gameState,
       currentTurn
@@ -126,10 +134,10 @@ class TurnManager {
 
   _processTurnEnd(gameId, gameState, playerId) {
     if (gameState.status !== GameStatus.PLAYING) {
-      console.log('Game is not in playing state:', gameState.status);
       return null;
     }
-
+  
+    // Mark the turn as completed
     this._markTurnAsCompleted(gameId, playerId);
     
     const completions = this._getCompletions(gameId);
@@ -147,18 +155,24 @@ class TurnManager {
         return null;
       }
       
+      // Generate pattern size if it's a pattern turn
+      const nextGeneration = gameState.currentTurn.generation;
+      const isPatternTurn = nextGeneration % PATTERN_RATIO === 0;
+      const patternSize = isPatternTurn ? Math.floor(Math.random() * 7) + 3 : null; // 3 to 9
+  
       const updatedState = {
         ...gameState,
         grid: currentGrid,
         currentTurn: {
           playerId: nextPlayer.id,
           team: nextPlayer.team,
-          phase: TurnPhase.PLACEMENT,
+          phase: isPatternTurn ? TurnPhase.PATTERN_SIZE_SELECTION : TurnPhase.PLACEMENT,
           startTime: Date.now(),
-          generation: gameState.currentTurn.generation
+          generation: nextGeneration,
+          patternSize
         }
       };
-
+  
       return { type: 'NEXT_TURN', state: updatedState };
     }
   }
@@ -203,55 +217,67 @@ class TurnManager {
   }
 
   _handleRoundCompletion(gameId, gameState, currentGrid) {
-    
     const newGrid = ConwayRules.calculateNextGeneration(currentGrid);
     const { redTerritory, blueTerritory } = ConwayRules.calculateTerritory(newGrid);
-
+  
     this._resetRoundTracking(gameId);
-
-    // Check for victory condition
+  
+    // Create updated state with new grid and territory
     const updatedState = {
       ...gameState,
       grid: newGrid,
       redTerritory,
       blueTerritory
     };
-
-    // Only check victory if territory threshold is enabled
+  
+    // Check for victory condition if territory threshold is enabled
     if (gameState.settings.territoryThresholdEnabled) {
-      const victoryResult = VictoryCheck.checkVictory(updatedState);
-      if (victoryResult) {
-        return { 
-          type: 'VICTORY_DETECTED', 
-          state: {
-            ...victoryResult,
-            previousTurn: {
-              team: gameState.currentTurn.team,
-              playerId: gameState.currentTurn.playerId,
-              generation: gameState.currentTurn.generation
+      const totalCells = gameState.settings.gridSize * gameState.settings.gridSize;
+      const redPercentage = (redTerritory / totalCells) * 100;
+      const bluePercentage = (blueTerritory / totalCells) * 100;
+      const threshold = gameState.settings.territoryThreshold;
+  
+      if (redPercentage >= threshold || bluePercentage >= threshold) {
+        const victoryResult = VictoryCheck.checkVictory(updatedState);
+        if (victoryResult) {
+          return { 
+            type: 'VICTORY_DETECTED', 
+            state: {
+              ...victoryResult,
+              previousTurn: {
+                team: gameState.currentTurn.team,
+                playerId: gameState.currentTurn.playerId,
+                generation: gameState.currentTurn.generation
+              }
             }
-          }
-        };
+          };
+        }
       }
     }
-
+  
     // If no victory, continue with next turn
     const nextTeam = updatedState.currentTurn.team === TeamColors.RED ? TeamColors.BLUE : TeamColors.RED;
     const nextPlayer = this._findPlayerByTeam(gameState, nextTeam);
-
+  
     if (!nextPlayer) {
       console.error('Next player not found for team:', nextTeam);
       return null;
     }
-
+  
+    // Generate pattern size if it's a pattern turn
+    const nextGeneration = gameState.currentTurn.generation + 1;
+    const isPatternTurn = nextGeneration % PATTERN_RATIO === 0;
+    const patternSize = isPatternTurn ? Math.floor(Math.random() * 7) + 3 : null; // 3 to 9
+  
     updatedState.currentTurn = {
       playerId: nextPlayer.id,
       team: nextPlayer.team,
-      phase: TurnPhase.PLACEMENT,
+      phase: isPatternTurn ? TurnPhase.PATTERN_SIZE_SELECTION : TurnPhase.PLACEMENT,
       startTime: Date.now(),
-      generation: gameState.currentTurn.generation + 1
+      generation: nextGeneration,
+      patternSize
     };
-
+  
     return { type: 'NEW_GENERATION', state: updatedState };
   }
 
@@ -365,6 +391,45 @@ class TurnManager {
         generation: previousTurn.generation + 1
       }
     };
+  }
+
+  startPatternTurn(gameState, playerId) {
+    const player = gameState.players.find(p => p.id === playerId);
+    if (!player) return gameState;
+
+    // Generate random pattern size between 3 and 9
+    const patternSize = Math.floor(Math.random() * 7) + 3; // 3 to 9
+
+    return {
+      ...gameState,
+      currentTurn: {
+        ...gameState.currentTurn,
+        playerId,
+        team: player.team,
+        phase: TurnPhase.PATTERN_SIZE_SELECTION,
+        patternSize,
+        startTime: Date.now(),
+        generation: gameState.currentTurn.generation
+      }
+    };
+  }
+
+  handlePatternSizeConfirmation(gameId, gameState, playerId) {
+    if (gameState.currentTurn.phase !== TurnPhase.PATTERN_SIZE_SELECTION ||
+        gameState.currentTurn.playerId !== playerId) {
+      return null;
+    }
+  
+    const updatedState = {
+      ...gameState,
+      currentTurn: {
+        ...gameState.currentTurn,
+        phase: TurnPhase.PLACEMENT
+      }
+    };
+    console.log('Pattern size confirmed:', updatedState.currentTurn.patternSize);
+  
+    return { type: 'PATTERN_SIZE_CONFIRMED', state: updatedState };
   }
 
   startTimer(gameId, gameState, io) {

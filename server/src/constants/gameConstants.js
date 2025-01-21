@@ -19,9 +19,10 @@ const CellState = {
   
   const TurnPhase = {
     PLACEMENT: 'placement',
+    PATTERN_SIZE_SELECTION: 'pattern_size_selection',
     GENERATION: 'generation',
     SIMULATION: 'simulation',
-  };
+  };  
 
   const PATTERN_RATIO = 1;
   

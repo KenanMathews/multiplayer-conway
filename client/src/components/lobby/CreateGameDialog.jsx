@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -17,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { Lock, Globe } from 'lucide-react';
 
 const GRID_SIZES = [
   { value: "20", label: "20 x 20" },
@@ -40,6 +42,8 @@ const CreateGameDialog = ({
   setGridSize,
   turnTime,
   setTurnTime,
+  isPrivate,
+  setIsPrivate,
   onCreateGame,
 }) => {
   return (
@@ -123,6 +127,17 @@ const CreateGameDialog = ({
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+
+                <div className="flex items-center justify-between space-x-2">
+                  <div className="flex items-center space-x-2">
+                    <Label className="text-sm">{isPrivate ? <Lock className="h-4 w-4" /> : <Globe className="h-4 w-4" />}</Label>
+                    <Label className="text-sm">Private Room</Label>
+                  </div>
+                  <Switch
+                    checked={isPrivate}
+                    onCheckedChange={setIsPrivate}
+                  />
                 </div>
 
                 <div className="flex justify-between items-center pt-2">

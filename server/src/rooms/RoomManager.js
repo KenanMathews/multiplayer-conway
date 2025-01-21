@@ -14,7 +14,10 @@ class RoomManager {
     const room = {
       id: gameId,
       players: [],
-      settings,
+      settings: {
+        ...settings,
+        isPrivate: settings.isPrivate || false
+      },
       status: GameStatus.WAITING,
       grid: this._createEmptyGrid(settings.gridSize),
       currentTurn: null,
@@ -23,6 +26,35 @@ class RoomManager {
 
     this.rooms.set(gameId, room);
     return room;
+  }
+
+  getAvailableRooms() {
+    let availableRooms = [];
+    
+    for (const [id, room] of this.rooms) {
+      // Only include public rooms that are waiting and not full
+      if (room.status === GameStatus.WAITING && 
+          room.players.length < room.settings.maxPlayers &&
+          !room.settings.isPrivate) {
+        
+        // Find the host player
+        const host = room.players.find(player => player.isHost);
+        availableRooms.push({
+          id: id,
+          host: host ? host.username : 'Unknown',
+          players: room.players.length,
+          maxPlayers: room.settings.maxPlayers,
+          gridSize: room.settings.gridSize,
+          turnTime: room.settings.turnTime,
+          isPrivate: false
+        });
+      }
+    }
+    return availableRooms;
+  }
+
+  roomExists(gameId) {
+    return this.rooms.has(gameId);
   }
 
   _createEmptyGrid(size) {
@@ -78,7 +110,13 @@ class RoomManager {
   }
 
   removeRoom(gameId) {
-    this.rooms.delete(gameId);
+    console.trace()
+    console.log('Removing room:', gameId);
+    if (this.rooms.has(gameId)) {
+      this.rooms.delete(gameId);
+      return true;
+    }
+    return false;
   }
 
   canJoinRoom(gameId) {
@@ -91,6 +129,11 @@ class RoomManager {
     );
   }
 
+  isPrivateRoom(gameId) {
+    const room = this.getRoom(gameId);
+    return room ? room.settings.isPrivate : false;
+  }
+
   isValidTeamSelection(gameId, team) {
     const room = this.getRoom(gameId);
     if (!room) return false;
@@ -100,23 +143,44 @@ class RoomManager {
 
   initializeGameTurn(room) {
     const redPlayer = room.players.find(p => p.team === TeamColors.RED);
+    const initialGeneration = 0;
     
+    // For pattern turns, start with pattern size selection
+    if (this._isPatternTurn({ ...room, currentTurn: { generation: initialGeneration } })) {
+      return {
+        playerId: redPlayer.id,
+        team: TeamColors.RED,
+        phase: TurnPhase.PATTERN_SIZE_SELECTION,
+        patternSize: Math.floor(Math.random() * 7) + 3, // 3 to 9
+        startTime: Date.now(),
+        generation: initialGeneration
+      };
+    }
+  
+    // Regular turn initialization
     return {
       playerId: redPlayer.id,
       team: TeamColors.RED,
       phase: TurnPhase.PLACEMENT,
       startTime: Date.now(),
-      generation: 0
+      generation: initialGeneration
     };
   }
 
   isValidMove(gameId, playerId, x, y) {
     const room = this.getRoom(gameId);
     if (!room) return false;
+  
+    // Check if we're in a valid phase for moves
+    const validPhases = [TurnPhase.PLACEMENT, TurnPhase.PLACEMENT];
+    if (!validPhases.includes(room.currentTurn.phase)) {
+      console.log('Invalid phase for move:', room.currentTurn.phase);
+      return false;
+    }
+  
     return (
       room.status === GameStatus.PLAYING &&
       room.currentTurn.playerId === playerId &&
-      room.currentTurn.phase === TurnPhase.PLACEMENT &&
       this._isWithinGridBounds(room, x, y) &&
       room.grid[y][x] === CellState.EMPTY
     );
@@ -141,7 +205,17 @@ class RoomManager {
 
   isValidPatternMove(gameId, playerId, x, y, pattern) {
     const room = this.getRoom(gameId);
+    console.log('isValidPatternMove', room, pattern);
     if (!room || !this._isPatternTurn(room)) return false;
+
+    if (room.currentTurn.phase !== TurnPhase.PLACEMENT) {
+      return false;
+    }
+
+    if (pattern.length !== room.currentTurn.patternSize ||
+        pattern[0].length !== room.currentTurn.patternSize) {
+      return false;
+    }
 
     if (!this.isValidMove(gameId, playerId, x, y)) return false;
 

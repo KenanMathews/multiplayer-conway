@@ -15,7 +15,8 @@ export const TeamColor = {
 // Turn Phase Enum
 export const TurnPhase = {
   PLACEMENT: 'placement',
-  SIMULATION: 'simulation'
+  SIMULATION: 'simulation',
+  PATTERN_SIZE_SELECTION: 'pattern_size_selection',
 };
 
 // Grid Cell Structure - Match with ConwayRules
@@ -44,7 +45,7 @@ export const createGameSettings = ({
   maxPlayers = 2,
   minPlayersToStart = 2,
   territoryThresholdEnabled = true,
-  territoryThreshold = 12
+  territoryThreshold = 15
 } = {}) => ({
   gridSize,
   turnTime,
