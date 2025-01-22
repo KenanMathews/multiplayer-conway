@@ -152,17 +152,14 @@ class RoomManager {
         team: TeamColors.RED,
         phase: TurnPhase.PATTERN_SIZE_SELECTION,
         patternSize: Math.floor(Math.random() * 7) + 3, // 3 to 9
-        startTime: Date.now(),
         generation: initialGeneration
       };
     }
   
-    // Regular turn initialization
     return {
       playerId: redPlayer.id,
       team: TeamColors.RED,
       phase: TurnPhase.PLACEMENT,
-      startTime: Date.now(),
       generation: initialGeneration
     };
   }
@@ -193,14 +190,6 @@ class RoomManager {
       y >= 0 && 
       y < room.settings.gridSize
     );
-  }
-
-  isTurnTimeout(gameId) {
-    const room = this.getRoom(gameId);
-    if (!room?.currentTurn?.startTime) return false;
-
-    const elapsed = (Date.now() - room.currentTurn.startTime) / 1000;
-    return elapsed >= room.settings.turnTime;
   }
 
   isValidPatternMove(gameId, playerId, x, y, pattern) {

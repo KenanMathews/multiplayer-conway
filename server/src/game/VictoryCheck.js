@@ -21,13 +21,13 @@ class VictoryCheck {
     const threshold = gameState.settings.territoryThreshold;
 
     if (redPercentage >= threshold || bluePercentage >= threshold) {
-      return this.startSimulation(gameState);
+      return this.initializeSimulation(gameState);
     }
 
     return null;
   }
 
-  startSimulation(gameState) {
+  initializeSimulation(gameState) {
     return {
       ...gameState,
       status: GameStatus.SIMULATING,
@@ -52,7 +52,6 @@ class VictoryCheck {
     const { redTerritory, blueTerritory } = ConwayRules.calculateTerritory(newGrid);
     const remainingGenerations = gameState.currentTurn.remainingGenerations - 1;
 
-    // Check if simulation should end
     if (remainingGenerations <= 0 || redTerritory === 0 || blueTerritory === 0) {
       return this.determineSimulationEnd({
         ...gameState,

@@ -159,7 +159,6 @@ class SocketHandlers {
         currentTurn: RoomManager.initializeGameTurn(updatedState),
       });
 
-      TurnManager.startTimer(gameId, gameState, this.io);
       this.io.to(gameId).emit("game_started", gameState);
     }
   }
@@ -247,7 +246,6 @@ class SocketHandlers {
 
       this.handleGenerationUpdate(gameId, result);
       this.io.to(gameId).emit("game_updated", updatedState);
-      TurnManager.startTimer(gameId, updatedState, this.io);
     } catch (error) {
       this.handleError(socket, "Error skipping turn", error);
     }
@@ -328,7 +326,6 @@ class SocketHandlers {
       } else {
         this.handleGenerationUpdate(gameId, result);
         this.io.to(gameId).emit('game_updated', updatedState);
-        TurnManager.startTimer(gameId, updatedState, this.io);
       }
     } catch (error) {
       this.handleError(socket, "Error completing turn", error);
@@ -336,7 +333,6 @@ class SocketHandlers {
   }
   
   startSimulation(gameId, initialState) {
-    // Clear any existing simulation
     if (this.activeSimulations.has(gameId)) {
       clearInterval(this.activeSimulations.get(gameId));
     }
@@ -357,19 +353,16 @@ class SocketHandlers {
   
       const updatedState = RoomManager.updateRoom(gameId, nextState);
   
-      // If simulation ended without a winner, resume normal gameplay
       if (updatedState.status === GameStatus.PLAYING) {
         const gameplayState = TurnManager.handleSimulationEnd(gameId, updatedState);
         if (gameplayState) {
           const finalState = RoomManager.updateRoom(gameId, gameplayState);
           this.io.to(gameId).emit('game_updated', finalState);
-          TurnManager.startTimer(gameId, finalState, this.io);
         }
         this.cleanup(gameId);
         return;
       }
   
-      // Emit updates
       this.io.to(gameId).emit('game_updated', updatedState);
       this.io.to(gameId).emit('generation_completed', {
         grid: updatedState.grid,
@@ -378,9 +371,9 @@ class SocketHandlers {
         remainingGenerations: updatedState.currentTurn.remainingGenerations
       });
   
-      // Check if simulation is complete
       if (updatedState.status === GameStatus.FINISHED) {
         this.io.to(gameId).emit('simulation_completed', {
+          gameId: gameId,
           winner: updatedState.winner,
           finalGrid: updatedState.grid,
           redTerritory: updatedState.redTerritory,
