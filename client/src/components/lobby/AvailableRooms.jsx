@@ -6,7 +6,6 @@ import { useGame } from '@/context/GameContext';
 
 const AvailableRooms = ({ onJoinRoom, username, isJoining }) => {
   const { availableRooms } = useGame();
-    console.log("availableRoom", availableRooms);
   return (
     <div className="space-y-4">
       <CardHeader className="px-0 pb-3">

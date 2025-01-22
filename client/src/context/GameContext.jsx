@@ -232,40 +232,7 @@ const gameReducer = (state, action) => {
       };
 
     case GameActions.SIMULATION_COMPLETED:
-      const completedState = {
-        ...state,
-        status: GameStatus.FINISHED,
-        winner: action.payload.winner,
-        grid: action.payload.finalGrid,
-        redTerritory: action.payload.redTerritory,
-        blueTerritory: action.payload.blueTerritory,
-        currentTurn: {
-          ...state.currentTurn,
-          remainingGenerations: 0,
-          phase: TurnPhase.SIMULATION,
-        },
-      };
-
-      // If no winner, prepare for gameplay resumption
-      if (!action.payload.winner && state.previousTurn) {
-        const nextTeam = state.previousTurn.team === "red" ? "blue" : "red";
-        const nextPlayer = state.players.find((p) => p.team === nextTeam);
-
-        return {
-          ...completedState,
-          status: GameStatus.PLAYING,
-          currentTurn: {
-            playerId: nextPlayer?.id,
-            team: nextTeam,
-            phase: TurnPhase.PLACEMENT,
-            startTime: Date.now(),
-            generation: state.previousTurn.generation + 1,
-          },
-          previousTurn: null, // Clear previous turn as we're back to normal gameplay
-        };
-      }
-
-      return completedState;
+      return state;
 
     case GameActions.UPDATE_TERRITORY:
       return {
@@ -480,9 +447,6 @@ export const GameProvider = ({ children }) => {
         type: GameActions.UPDATE_GAME,
         payload: updatedGame,
       });
-      if (updatedGame.status === GameStatus.FINISHED) {
-        navigate(`/end/${updatedGame.id}`);
-      }
     };
 
     const handleGenerationComplete = (data) => {
@@ -501,8 +465,9 @@ export const GameProvider = ({ children }) => {
         type: GameActions.SIMULATION_COMPLETED,
         payload: data,
       });
-      if (gameState?.id) {
-        navigate(`/end/${gameState.id}`);
+      console.log(data);
+      if (data?.gameId) {
+        navigate(`/end/${data.gameId}`);
       }
     };
 

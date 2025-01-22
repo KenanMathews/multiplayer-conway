@@ -86,21 +86,8 @@ const GameEnd = () => {
 
   if (!gameState || gameState.id !== gameId) return null;
 
-  const handlePlayAgain = () => {
-    const newGameId = Math.random().toString(36).substring(2, 8).toUpperCase();
-    navigate(`/game/${newGameId}`);
-  };
-
   const handleReturnHome = () => {
     navigate('/');
-  };
-
-  const handleShareGame = () => {
-    const shareUrl = `${window.location.origin}/end/${gameId}`;
-    navigator.clipboard.writeText(shareUrl).then(() => {
-      // You might want to add a toast notification here
-      alert('Game link copied to clipboard!');
-    });
   };
 
   const getVictoryMessage = () => {
@@ -139,19 +126,6 @@ const GameEnd = () => {
           >
             <Home className="mr-2 h-4 w-4" />
             Return Home
-          </Button>
-          <Button
-            variant="outline"
-            onClick={handleShareGame}
-          >
-            <Share2 className="mr-2 h-4 w-4" />
-            Share Game
-          </Button>
-          <Button
-            onClick={handlePlayAgain}
-          >
-            <RotateCcw className="mr-2 h-4 w-4" />
-            Play Again
           </Button>
         </div>
       </Card>

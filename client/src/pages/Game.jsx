@@ -39,14 +39,13 @@ const Game = () => {
     }
   }, [currentPhase, isCurrentTurn, previewPattern]);
 
-  // Redirect if game is not in PLAYING state
   React.useEffect(() => {
-    if (!gameState || gameState.status !== GameStatus.PLAYING) {
+    if (!gameState || (gameState.status !== GameStatus.PLAYING && gameState.status !== GameStatus.FINISHED)) {
       navigate(`/`);
     }
   }, [gameState, gameId, navigate]);
-
-  if (!gameState || gameState.status !== GameStatus.PLAYING) {
+  
+  if (!gameState || (gameState.status !== GameStatus.PLAYING && gameState.status !== GameStatus.FINISHED)) {
     return null;
   }
 
