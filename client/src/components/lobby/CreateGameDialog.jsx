@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { Slider } from "@/components/ui/slider";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Select,
@@ -20,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { Lock, Globe } from 'lucide-react';
+import { Lock, Globe, Minus, Plus } from 'lucide-react';
 
 const GRID_SIZES = [
   { value: "20", label: "20 x 20" },
@@ -52,10 +51,18 @@ const CreateGameDialog = ({
   setGridSize,
   isPrivate,
   setIsPrivate,
-  territoryThreshold,
+  territoryThreshold = 15,
   setTerritoryThreshold,
   onCreateGame,
 }) => {
+  const decrementThreshold = () => {
+    setTerritoryThreshold(Math.max(5, territoryThreshold - 5));
+  };
+
+  const incrementThreshold = () => {
+    setTerritoryThreshold(Math.min(100, territoryThreshold + 5));
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px] bg-background">
@@ -136,14 +143,35 @@ const CreateGameDialog = ({
                       </span>
                     </div>
                   </div>
-                  <Slider
-                    value={[territoryThreshold]}
-                    onValueChange={([value]) => setTerritoryThreshold(value)}
-                    min={5}
-                    max={100}
-                    step={1}
-                    className="w-full"
-                  />
+                  <div className="flex items-center justify-between gap-4">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={decrementThreshold}
+                      disabled={territoryThreshold <= 5}
+                      className="h-8 w-8"
+                    >
+                      <Minus className="h-4 w-4" />
+                    </Button>
+                    <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden">
+                      <div 
+                        className={cn(
+                          "h-full rounded-full transition-all",
+                          getDifficultyColor(territoryThreshold)
+                        )}
+                        style={{ width: `${territoryThreshold}%` }}
+                      />
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={incrementThreshold}
+                      disabled={territoryThreshold >= 100}
+                      className="h-8 w-8"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
                   {territoryThreshold > 25 && (
                     <Alert variant="warning" className="mt-2">
                       <AlertDescription className="text-xs">
