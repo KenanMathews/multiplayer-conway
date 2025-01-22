@@ -19,6 +19,7 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
   },
+  external: [/^@\/components\/ui/],
   build: {
     outDir: 'dist',
     chunkSizeWarningLimit: 1500,
