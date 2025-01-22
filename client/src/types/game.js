@@ -212,24 +212,6 @@ export const gameUpdates = {
       return game;
   },
 
-  handleTimeout: (game) => {
-      const currentPlayer = game.players.find(p => p.id === game.currentTurn.playerId);
-      if (currentPlayer) {
-          currentPlayer.timeoutWarnings++;
-
-          // Check for game over by timeout
-          if (currentPlayer.timeoutWarnings >= game.settings.maxTimeoutWarnings) {
-              game.status = GameStatus.FINISHED;
-              game.winner = game.players.find(p => p.id !== currentPlayer.id);
-          } else {
-              // Move to next turn
-              gameUpdates.nextTurn(game);
-          }
-      }
-
-      return game;
-  },
-
   setNewGeneration: (game, newGrid) => {
     game.grid = newGrid;
     

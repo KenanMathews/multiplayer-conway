@@ -29,12 +29,6 @@ const GRID_SIZES = [
   { value: "50", label: "50 x 50" },
 ];
 
-const TURN_TIMES = [
-  { value: "30", label: "30 seconds" },
-  { value: "45", label: "45 seconds" },
-  { value: "60", label: "60 seconds" },
-];
-
 const getDifficultyColor = (threshold) => {
   if (threshold <= 25) return "bg-green-500";
   if (threshold <= 50) return "bg-yellow-500";
@@ -56,8 +50,6 @@ const CreateGameDialog = ({
   setSelectedTeam,
   gridSize,
   setGridSize,
-  turnTime,
-  setTurnTime,
   isPrivate,
   setIsPrivate,
   territoryThreshold,
@@ -132,22 +124,6 @@ const CreateGameDialog = ({
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-sm">Turn Time</Label>
-                  <Select value={turnTime} onValueChange={setTurnTime}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select turn time" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {TURN_TIMES.map(({ value, label }) => (
-                        <SelectItem key={value} value={value}>
-                          {label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
                   <div className="flex justify-between items-center">
                     <Label className="text-sm">Territory Threshold</Label>
                     <div className="flex items-center gap-2">
@@ -202,7 +178,7 @@ const CreateGameDialog = ({
 
           <Button
             onClick={onCreateGame}
-            disabled={!selectedTeam || !gridSize || !turnTime}
+            disabled={!selectedTeam || !gridSize}
             className="w-full"
           >
             Create Game

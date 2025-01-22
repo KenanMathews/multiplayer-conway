@@ -65,9 +65,6 @@ const PlayerStats = ({ player, isWinner }) => (
         </span>
       )}
     </div>
-    <div className="mt-2 text-sm text-gray-600">
-      <p>Timeout Warnings: {player.timeoutWarnings}/{player.settings?.maxTimeoutWarnings}</p>
-    </div>
   </Card>
 );
 

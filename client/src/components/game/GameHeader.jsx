@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Pause, Play, SkipForward } from "lucide-react";
 import { useGame } from '@/context/GameContext';
 import { GameStatus, TeamColor, TurnPhase } from '@/types/game';
-import Timer from './Timer';
 
 const SimulationControls = () => {
   const { gameState, pauseSimulation, resumeSimulation, skipSimulation } = useGame();
@@ -147,9 +146,6 @@ const GameHeader = ({ isCurrentTurn }) => {
                 />
                 <span className="text-sm">
                   {player.username}
-                  {player.timeoutWarnings > 0 && 
-                    ` (${player.timeoutWarnings}/${gameState.settings.maxTimeoutWarnings})`
-                  }
                 </span>
               </div>
             ))}
@@ -161,15 +157,8 @@ const GameHeader = ({ isCurrentTurn }) => {
             />
           </div>
           <div className="flex items-center gap-4">
-            {isSimulating ? (
+            {isSimulating && (
               <SimulationControls />
-            ) : (
-              <Timer
-                turnStartTime={gameState.currentTurn.startTime}
-                turnDuration={gameState.settings.turnTime}
-                isCurrentTurn={isCurrentTurn}
-                disabled={isSimulating}
-              />
             )}
           </div>
         </div>
