@@ -27,8 +27,8 @@ export default defineConfig({
         manualChunks: {
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
           'ui-vendor': ['@radix-ui/react-dialog', '@radix-ui/react-label', '@radix-ui/react-progress', 
-                       '@radix-ui/react-select', '@radix-ui/react-separator', '@radix-ui/react-slot', 
-                       '@radix-ui/react-tabs', '@radix-ui/react-toast','@radix-ui/react-switch','@radix-ui/react-tooltip']
+                       '@radix-ui/react-select', '@radix-ui/react-separator', '@radix-ui/react-slider', '@radix-ui/react-slot', 
+                       '@radix-ui/react-tabs', '@radix-ui/react-toast']
         }
       }
     }
