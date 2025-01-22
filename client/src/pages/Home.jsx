@@ -28,6 +28,8 @@ const Home = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
   const [isPrivate, setIsPrivate] = useState(false);
+  const [territoryThreshold, setTerritoryThreshold] = useState(50);
+
 
   const handleCreateGame = async () => {
     if (!username.trim() || !selectedTeam) {
@@ -52,7 +54,7 @@ const Home = () => {
         minPlayersToStart: 2, 
         isPrivate,
         territoryThresholdEnabled: defaultSettings.territoryThresholdEnabled,
-        territoryThreshold: defaultSettings.territoryThreshold
+        territoryThreshold: territoryThreshold || defaultSettings.territoryThreshold,
       };
       
       const gameId = await createNewGame(username, selectedTeam, settings);
@@ -225,6 +227,8 @@ const Home = () => {
         isCreating={isCreating}
         isPrivate={isPrivate}
         setIsPrivate={setIsPrivate}
+        territoryThreshold={territoryThreshold}
+        setTerritoryThreshold={setTerritoryThreshold}
       />
     </div>
   );

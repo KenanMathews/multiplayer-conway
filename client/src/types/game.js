@@ -45,7 +45,7 @@ export const createGameSettings = ({
   maxPlayers = 2,
   minPlayersToStart = 2,
   territoryThresholdEnabled = true,
-  territoryThreshold = 15
+  territoryThreshold = 10
 } = {}) => ({
   gridSize,
   turnTime,

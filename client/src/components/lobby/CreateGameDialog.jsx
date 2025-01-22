@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Select,
   SelectContent,
@@ -33,6 +35,20 @@ const TURN_TIMES = [
   { value: "60", label: "60 seconds" },
 ];
 
+const getDifficultyColor = (threshold) => {
+  if (threshold <= 25) return "bg-green-500";
+  if (threshold <= 50) return "bg-yellow-500";
+  if (threshold <= 75) return "bg-orange-500";
+  return "bg-red-500";
+};
+
+const getDifficultyText = (threshold) => {
+  if (threshold <= 25) return "Normal";
+  if (threshold <= 50) return "Hard";
+  if (threshold <= 75) return "Very Hard";
+  return "Extreme";
+};
+
 const CreateGameDialog = ({
   open,
   onOpenChange,
@@ -44,6 +60,8 @@ const CreateGameDialog = ({
   setTurnTime,
   isPrivate,
   setIsPrivate,
+  territoryThreshold,
+  setTerritoryThreshold,
   onCreateGame,
 }) => {
   return (
@@ -127,6 +145,40 @@ const CreateGameDialog = ({
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <Label className="text-sm">Territory Threshold</Label>
+                    <div className="flex items-center gap-2">
+                      <div className={cn(
+                        "w-2 h-2 rounded-full",
+                        getDifficultyColor(territoryThreshold)
+                      )} />
+                      <span className="text-sm text-muted-foreground">
+                        {territoryThreshold}% - {getDifficultyText(territoryThreshold)}
+                      </span>
+                    </div>
+                  </div>
+                  <Slider
+                    value={[territoryThreshold]}
+                    onValueChange={([value]) => setTerritoryThreshold(value)}
+                    min={5}
+                    max={100}
+                    step={1}
+                    className="w-full"
+                  />
+                  {territoryThreshold > 25 && (
+                    <Alert variant="warning" className="mt-2">
+                      <AlertDescription className="text-xs">
+                        {territoryThreshold > 75 
+                          ? "Winning is almost impossible!"
+                          : territoryThreshold > 50 
+                            ? "Very challenging situation!"
+                            : "This will be a tough game!"}
+                      </AlertDescription>
+                    </Alert>
+                  )}
                 </div>
 
                 <div className="flex items-center justify-between space-x-2">
