@@ -31,9 +31,6 @@ export default defineConfig({
               id.includes('node_modules/react-router-dom')) {
             return 'react-vendor';
           }
-          if (id.includes('node_modules/@radix-ui')) {
-            return 'ui-vendor';
-          }
         }
       }
     }
